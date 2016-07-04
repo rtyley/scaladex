@@ -57,7 +57,8 @@ lazy val server = project
       "org.webjars.bower"                   % "bootstrap-select"       % "1.10.0",
       "org.webjars.bower"                   % "font-awesome"           % "4.6.3",
       "org.webjars.bower"                   % "jQuery"                 % "2.2.4",
-      "org.webjars.bower"                   % "select2"                % "4.0.3"
+      "org.webjars.bower"                   % "select2"                % "4.0.3",
+      "org.seleniumhq.selenium"             % "selenium-java"          % "2.53.1" % "test"
     ),
     reStart <<= reStart.dependsOn(WebKeys.assets in Assets),
     unmanagedResourceDirectories in Compile += (WebKeys.public in Assets).value,

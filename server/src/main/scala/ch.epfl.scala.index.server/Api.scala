@@ -2,7 +2,7 @@ package ch.epfl.scala.index
 package server
 
 import model._
-import misc.{GithubRepo, Pagination, UserInfo}
+import misc.{GithubRepo, Pagination}
 
 import data.elastic._
 import com.sksamuel.elastic4s._
@@ -12,12 +12,11 @@ import org.elasticsearch.search.sort.SortOrder
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.reflectiveCalls
 
-class ApiImplementation(github: Github, userState: Option[UserState])(implicit val ec: ExecutionContext) {
+class Api(github: Github)(implicit val ec: ExecutionContext) {
   private def hideId(p: Project) = p.copy(_id = None)
 
-  val resultsPerPage: Int = 10
+  private val resultsPerPage = 10
 
-  def userInfo(): Option[UserInfo] = userState.map(_.user)
   def autocomplete(q: String): Future[List[(String, String, String)]] = {
     find(q, 0).map{ case (_, projects) =>
       (for {
@@ -31,7 +30,7 @@ class ApiImplementation(github: Github, userState: Option[UserState])(implicit v
     }
   }
 
-  val sortQuery = (sorting: Option[String]) =>
+  private val sortQuery = (sorting: Option[String]) =>
     sorting match {
       case Some("stars") => fieldSort("github.stars") missing "0" order SortOrder.DESC mode MultiMode.Avg
       case Some("forks") => fieldSort("github.forks") missing "0" order SortOrder.DESC mode MultiMode.Avg
