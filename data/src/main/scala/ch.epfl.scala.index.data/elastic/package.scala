@@ -37,7 +37,7 @@ package object elastic extends ProjectProtocol {
 
   /** @see https://github.com/sksamuel/elastic4s#client for configurations */
 
-  val maxResultWindow = 10000 // <=> max amount of projects (June 1st 2016 ~ 2500 projects)
+  val maxResultWindow = 10000 // <=> max amount of projects (Jully 1st 2016 ~ 3100 projects)
   private val home = System.getProperty("user.home")
   val esSettings = Settings.settingsBuilder()
     .put("path.home", home + "/.esdata")
