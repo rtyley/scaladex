@@ -127,6 +127,7 @@ lazy val database = project
     scalacOptions -= "-Ywarn-unused-import",
     libraryDependencies ++= Seq(
       "com.typesafe.slick" %% "slick"      % "3.1.0",
+      "com.zaxxer"          % "HikariCP"   % "2.5.1",
       "org.postgresql"      % "postgresql" % "9.4-1201-jdbc41"
     ),
     slickCodegenDatabaseUrl      := (flywayUrl in flyway).value,

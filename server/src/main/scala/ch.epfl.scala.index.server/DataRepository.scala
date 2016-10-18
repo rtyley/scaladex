@@ -16,7 +16,7 @@ import org.elasticsearch.search.sort.SortOrder
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.reflectiveCalls
 
-class DataRepository(github: Github)(private implicit val ec: ExecutionContext) {
+class DataRepository(github: Github, database: Database)(private implicit val ec: ExecutionContext) {
   private def hideId(p: Project) = p.copy(id = None)
 
   val resultsPerPage = 20
@@ -130,6 +130,7 @@ class DataRepository(github: Github)(private implicit val ec: ExecutionContext) 
     )
   }
 
+  // TODO: DB
   def releases(project: Project.Reference, artifact: Option[String]): Future[List[Release]] = {
     esClient.execute {
       search
@@ -154,6 +155,7 @@ class DataRepository(github: Github)(private implicit val ec: ExecutionContext) 
     * @param maven
     * @return
     */
+  // TODO: DB
   def maven(maven: MavenReference): Future[Option[Release]] = {
 
     esClient.execute {
@@ -174,6 +176,7 @@ class DataRepository(github: Github)(private implicit val ec: ExecutionContext) 
     }.map(r => r.as[Release].headOption)
   }
 
+  // TODO: DB
   def project(project: Project.Reference): Future[Option[Project]] = {
     esClient.execute {
       search
@@ -189,6 +192,7 @@ class DataRepository(github: Github)(private implicit val ec: ExecutionContext) 
     }.map(_.as[Project].headOption)
   }
 
+  // TODO: DB
   def projectPage(projectRef: Project.Reference,
                   selection: ReleaseSelection): Future[Option[(Project, ReleaseOptions)]] = {
     val projectAndReleases = for {
@@ -209,6 +213,7 @@ class DataRepository(github: Github)(private implicit val ec: ExecutionContext) 
     }
   }
 
+  // TODO: DB
   def updateProject(projectRef: Project.Reference, form: ProjectForm): Future[Boolean] = {
     for {
       updatedProject <- project(projectRef).map(_.map(p => form.update(p)))
@@ -220,10 +225,13 @@ class DataRepository(github: Github)(private implicit val ec: ExecutionContext) 
     } yield ret
   }
 
-  def latestProjects() =
-    latest[Project](projectsCollection, "created", 12).map(_.map(hideId))
+  // TODO: DB
+  def latestProjects() = latest[Project](projectsCollection, "created", 12).map(_.map(hideId))
+
+  // TODO: DB
   def latestReleases() = latest[Release](releasesCollection, "released", 12)
 
+  // TODO: DB
   private def latest[T: HitAs: Manifest](collection: String, by: String, n: Int): Future[List[T]] = {
     esClient.execute {
       search.in(indexName / collection).query(matchAllQuery).sort(fieldSort(by) order SortOrder.DESC).limit(n)
@@ -231,8 +239,12 @@ class DataRepository(github: Github)(private implicit val ec: ExecutionContext) 
     }.map(r => r.as[T].toList)
   }
 
+  // TODO: DB
   def keywords() = aggregations("keywords")
+
+  // TODO: DB
   def targets()  = aggregations("targets")
+
   def dependencies() = {
     // we remove testing or logging because they are always a dependency
     // we could have another view to compare testing frameworks
@@ -272,6 +284,7 @@ class DataRepository(github: Github)(private implicit val ec: ExecutionContext) 
     * @param field the field name
     * @return
     */
+  // TODO: DB
   private def aggregations(field: String): Future[Map[String, Long]] = {
 
     import scala.collection.JavaConverters._

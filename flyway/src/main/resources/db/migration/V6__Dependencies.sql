@@ -8,11 +8,19 @@ create table scaladex.Scala_Dependencies(
 );
 
 create table scaladex.Java_Dependencies(
-  id integer not null,
-  foreign key(id) references scaladex.Releases(id),
-  primary key(id),
-  scope varchar(255),
+  release_id integer not null,
+  foreign key(release_id) references scaladex.Releases(id),
+
+  java_release_id integer not null,
+  foreign key(java_release_id) references scaladex.Java_Releases(id),
+
+  primary key(release_id, java_release_id),
+  scope varchar(255)
+);
+
+create table scaladex.Java_Releases(
+  id integer not null primary key,
   groupId varchar(1024) not null,
   artifactId varchar(1024) not null,
   version varchar(1024) not null
-);
+)

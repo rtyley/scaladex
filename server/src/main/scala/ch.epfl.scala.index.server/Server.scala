@@ -42,12 +42,21 @@ object Server {
       }
     }
 
+    val dbConfig = ConfigFactory.load().getConfig("org.scala_lang.index.database")
+
+    val session = new DatabaseSession(    
+      jdbcUrl = dbConfig.getString("jdbcUrl"),
+      dbUser = dbConfig.getString("dbUser"),
+      dbPassword = dbConfig.getString("dbPassword")
+    )
+    val database = new Database(session)
+
     implicit val system = ActorSystem("scaladex")
     import system.dispatcher
     implicit val materializer = ActorMaterializer()
 
     val github = new Github
-    val data = new DataRepository(github)
+    val data = new DataRepository(github, database)
     val session = new GithubUserSession(config)
 
     val routes = 
