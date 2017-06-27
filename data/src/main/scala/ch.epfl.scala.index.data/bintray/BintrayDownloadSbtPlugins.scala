@@ -1,23 +1,29 @@
-package ch.epfl.scala.index.data.bintray
+package ch.epfl.scala.index
+package data
+package bintray
 
-import java.nio.file.Files
+import data.DataPaths
+import data.download.PlayWsDownloader
+import data.maven._
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import ch.epfl.scala.index.data.DataPaths
-import ch.epfl.scala.index.data.download.PlayWsDownloader
-import ch.epfl.scala.index.data.maven._
-import me.tongfei.progressbar.ProgressBar
 import org.apache.ivy.core.module.descriptor.ModuleDescriptor
 import org.apache.ivy.core.settings.IvySettings
 import org.apache.ivy.plugins.parser.xml.XmlModuleDescriptorParser
+
+import play.api.libs.ws.{WSClient, WSResponse}
+
+import java.nio.file.Files
+
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.ISODateTimeFormat
 import org.json4s.JsonAST.JValue
 import org.slf4j.LoggerFactory
-import play.api.libs.ws.{WSClient, WSResponse}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import me.tongfei.progressbar.ProgressBar
+
+import akka.actor.ActorSystem
+import akka.stream.Materializer
+
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success, Try}
@@ -30,6 +36,8 @@ final class BintrayDownloadSbtPlugins(paths: DataPaths)(
     val system: ActorSystem)
     extends PlayWsDownloader
     with BintrayProtocol {
+
+  import system.dispatcher
 
   val bintrayClient = new BintrayClient(paths)
   import bintrayClient._
