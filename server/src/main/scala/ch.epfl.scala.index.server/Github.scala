@@ -29,7 +29,8 @@ object Response {
 
 case class UserState(repos: Set[GithubRepo],
                      orgs: Set[Response.Organization],
-                     user: UserInfo) {
+                     user: UserInfo,
+                     token: String) {
   def isAdmin = orgs.contains(Response.Organization("scalacenter"))
   def isSonatype = orgs.contains(Response.Organization("sonatype"))
   def hasPublishingAuthority = isAdmin || isSonatype
@@ -160,7 +161,7 @@ class Github(implicit system: ActorSystem, materializer: ActorMaterializer)
 
       val Response.User(login, name, avatarUrl) = user
 
-      UserState(githubRepos, orgs.toSet, UserInfo(login, name, avatarUrl))
+      UserState(githubRepos, orgs.toSet, UserInfo(login, name, avatarUrl), token)
     }
   }
 }

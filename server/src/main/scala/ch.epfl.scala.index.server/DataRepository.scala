@@ -6,10 +6,11 @@ import model.misc._
 
 import data.DataPaths
 import data.project.ProjectForm
+import data.github._
+import data.elastic._
 
 import release._
 import misc.Pagination
-import data.elastic._
 
 import com.sksamuel.elastic4s.HitReader
 import com.sksamuel.elastic4s.ElasticDsl._
@@ -22,6 +23,9 @@ import org.elasticsearch.search.sort.SortOrder
 
 import org.slf4j.LoggerFactory
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+
 import scala.concurrent.{ExecutionContext, Future, Await}
 import scala.concurrent.duration.Duration
 
@@ -29,7 +33,11 @@ import scala.concurrent.duration.Duration
   * @param github  Github client
   * @param paths   Paths to the files storing the index
   */
-class DataRepository(github: Github, paths: DataPaths)(private implicit val ec: ExecutionContext) {
+class DataRepository(github: Github, paths: DataPaths)(
+    private implicit val system: ActorSystem,
+    private implicit val materializer: ActorMaterializer) {
+
+  import system.dispatcher
 
   private def hideId(p: Project) = p.copy(id = None)
 
@@ -75,6 +83,49 @@ class DataRepository(github: Github, paths: DataPaths)(private implicit val ec: 
           ),
           r.to[Project].toList.map(hideId)
       ))
+  }
+
+  def syncGithub(organization: String, 
+                 repository: String,
+                 userState: UserState): Future[Option[Unit]] = {
+
+    val repo = GithubRepo(organization, repository)
+
+    def download(): Future[Unit] = {
+      Future(
+        new GithubDownload(paths, Some(GithubCredentials(userState.token)))
+          .run(
+            repo,
+            info = true,
+            readme = true,
+            contributors = true
+          )
+      )
+    }
+
+    def fetchId(): Future[Option[Project]] = {
+      project(Project.Reference(organization, repository))
+    }
+
+    def updateIndex(project: Project): Future[Option[Unit]] = {
+      val updatedProject = 
+        project.copy(
+          github = GithubReader(paths, repo),
+          liveData = true
+        )
+
+      Future(project.id).map(_.map(id =>
+        esClient.execute(
+          update(id)
+            .in(indexName / projectsCollection)
+            .doc(updatedProject)
+        ).map(_ => ())
+      ))
+    }
+
+    download.zip(fetchId).map{case (_, project) =>
+      project.map(updateIndex)
+    }
   }
 
   private def getQuery(params: SearchParams) = {

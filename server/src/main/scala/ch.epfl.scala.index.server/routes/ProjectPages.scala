@@ -2,24 +2,33 @@ package ch.epfl.scala.index
 package server
 package routes
 
+import data._
+import elastic._
+import data.project.ProjectForm
 import model._
 import release._
-import data.project.ProjectForm
 import model.misc._
+
 import com.softwaremill.session._
 import SessionDirectives._
 import SessionOptions._
 import TwirlSupport._
+
+import play.twirl.api.Html
+
 import akka.http.scaladsl._
 import model._
 import server.Directives._
 import Uri._
 import StatusCodes._
+
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
 
-class ProjectPages(dataRepository: DataRepository, session: GithubUserSession) {
+class ProjectPages(dataRepository: DataRepository,
+                   session: GithubUserSession) {
+
   import session._
 
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -73,7 +82,7 @@ class ProjectPages(dataRepository: DataRepository, session: GithubUserSession) {
                           artifact: Option[String],
                           version: Option[String],
                           selected: Option[String],
-                          userState: Option[UserState]) = {
+                          userState: Option[UserState]): Future[(StatusCode, Html)] = {
 
     val user = userState.map(_.user)
 
@@ -197,6 +206,34 @@ class ProjectPages(dataRepository: DataRepository, session: GithubUserSession) {
             }
           }
         } ~
+          path("sync" / Segment / Segment) { (organization, repository) =>
+            optionalSession(refreshable, usingCookies) { userId =>
+              pathEnd {
+                // complete(
+
+                  getUser(userId) match {
+                    case Some(user) => {
+                      onSuccess(dataRepository.syncGithub(organization, repository, user))(_ =>
+                        complete(
+                          projectPage(
+                            owner = organization,
+                            repo = repository,
+                            target = None,
+                            artifact = None,
+                            version = None,
+                            selected = None,
+                            userState = Some(user)
+                          )
+                        )
+                      )
+                    }
+                    case None => complete(Future((Forbidden, "must be logged in to sync")))
+                  }
+
+                // )
+              }
+            }
+          } ~
           path(Segment / Segment) { (organization, repository) =>
             optionalSession(refreshable, usingCookies) { userId =>
               parameters(('artifact.?, 'version.?, 'target.?, 'selected.?)) {
