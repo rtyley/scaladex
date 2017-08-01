@@ -43,6 +43,10 @@ Make shure to run `bin/scalafmt` to format your code.
 
 You can intall a pre-commit hook with `bin/hooks.sh`
 
+## Scalafix
+
+run `sbt scalafix`
+
 ### Elasticsearch Remote
 
 If you have an elasticsearch service installed use the following sbt command when
@@ -216,4 +220,3 @@ user: foobarbuz
 pass: tLA4FN9O5jmPSnl/LDkSb0cYgJDe8HHdOMkY2yZO4m0=
 api:  c61e65b80662c064abe923a407b936894b29fb55
 repo: git@github.com:foobarbuz/example.git
-
