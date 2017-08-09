@@ -1,6 +1,8 @@
 package ch.epfl.scala.index
 package api
 
+import scala.collection.immutable
+
 import scala.concurrent.Future
 
 trait Api {

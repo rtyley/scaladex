@@ -29,6 +29,11 @@ lazy val baseSettings = Seq(
   version := s"0.2.0+${githash()}"
 )
 
+scalacOptions in ThisBuild ++= Seq(
+  "-Ywarn-unused-import",
+  "-Ywarn-adapted-args"
+)
+
 lazy val commonSettings = Seq(
   resolvers += Resolver.typesafeIvyRepo("releases"),
   scalaVersion := "2.12.2",
