@@ -1,0 +1,130 @@
+// http://search.maven.org/solrsearch/select
+
+import org.joda.time.DateTime
+import org.json4s._
+import org.json4s.native.JsonMethods._
+
+object TimeStampDateTimeSerializer extends CustomSerializer[DateTime](format =>
+  (
+    { 
+      case JLong(timestamp) => new DateTime(timestamp)
+      case JInt(timestamp) => new DateTime(timestamp.toLong)
+    },
+    { case time: DateTime => JLong(time.getMillis) }
+  )
+)
+
+implicit val formats = DefaultFormats ++ Seq(TimeStampDateTimeSerializer)
+implicit val serialization = native.Serialization
+
+// q=sbt-microsites
+object Latest {
+  case class Body(response: Response)
+  case class Response(docs: List[Doc])
+  case class Doc(
+    g: String,
+    a: String,
+    latestVersion: String,
+    timestamp: DateTime
+  )
+}
+
+// q = g:"com.47deg" AND a:"sbt-microsites"
+// core = gav
+object Gav {
+  case class Body(response: Response)
+  case class Response(docs: List[Doc])
+  case class Doc(
+    g: String,
+    a: String,
+    v: String,
+    timestamp: DateTime
+  )
+}
+
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+
+implicit val system = ActorSystem()
+import system.dispatcher
+implicit val materializer = ActorMaterializer()
+
+import com.typesafe.config.ConfigFactory
+import play.api._
+
+import play.api.libs.ws._
+import play.api.libs.ws.ahc._
+import play.api.libs.json._
+
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
+import scala.util.{Try, Success, Failure}
+
+val wsClient = {
+  val configuration = Configuration.reference ++ Configuration(
+    ConfigFactory.parseString("plaw.ws.followRedirects = true")
+  )
+
+  val environment = Environment(
+    new java.io.File("."),
+    this.getClass.getClassLoader,
+    Mode.Prod
+  )
+
+  val wsConfig = AhcWSClientConfigFactory.forConfig(
+    configuration.underlying,
+    environment.classLoader
+  )
+
+  AhcWSClient(wsConfig)
+}
+
+
+def requestLatest(querry: String) = {
+  wsClient
+    .url("http://search.maven.org/solrsearch/select")
+    .withQueryStringParameters(
+      "q" -> querry
+    )
+    .get
+}
+
+val responseLatest = Await.result(requestLatest("sbt-microsites"), 10.seconds)
+
+val latestMicrosites = parse(responseLatest.body).extract[Latest.Body]
+
+def requestGav(groupId: String, artifactId: String) = {
+  wsClient
+    .url("http://search.maven.org/solrsearch/select")
+    .withQueryStringParameters(
+      "q" -> s"""g:"$groupId" AND a:"$artifactId"""",
+      "core" -> "gav"
+    )
+    .get
+}
+
+val responseGav = Await.result(requestGav("com.47deg", "sbt-microsites"), 10.seconds)
+
+
+val allMicrosites = parse(responseGav.body).extract[Gav.Body]
+
+
+// http://repo1.maven.org/maven2/com/47deg/sbt-microsites_2.12_1.0/0.7.1/sbt-microsites-0.7.1.pom
+//                               com.47deg
+//                                         sbt-microsites
+//                                                                 0.7.1
+
+
+import ch.epfl.scala.index.model.release.ScalaTarget
+import ch.epfl.scala.index.model.SemanticVersion
+
+def download(groupId: String, artifact: String, version: String, target: ScalaTarget) = {
+  val path = groupId.replaceAllLiterally(".", "/")
+  wsClient.url(
+    s"http://repo1.maven.org/maven2/$path/$artifact${target.encode}/$version/$artifact-$version.pom"
+  )
+}
+
+val sbtTarget = ScalaTarget.sbt(SemanticVersion("2.12").get, SemanticVersion("1.0").get)
+
+val downloadResponse = Await.result(download("com.47deg", "sbt-microsites", "0.7.1", sbtTarget), 10.seconds)

@@ -25,7 +25,8 @@ class DefaultReleaseTests extends FunSpec {
       targetType = "JVM",
       scalaVersion = None,
       scalaJsVersion = None,
-      scalaNativeVersion = None
+      scalaNativeVersion = None,
+      sbtVersion = None
     )
 
   def prepare(organization: String,
