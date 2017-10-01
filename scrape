@@ -1,3 +1,7 @@
+import ch.epfl.scala.index.model.release.ScalaTarget
+import ch.epfl.scala.index.model.{SemanticVersion, Artifact}
+
+
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
@@ -15,8 +19,7 @@ import org.joda.time.DateTime
 import org.json4s._
 import org.json4s.native.JsonMethods._
 
-import ch.epfl.scala.index.model.release.ScalaTarget
-import ch.epfl.scala.index.model.SemanticVersion
+import java.nio.file._
 
 object TimeStampDateTimeSerializer extends CustomSerializer[DateTime](format =>
   (
@@ -82,43 +85,56 @@ val wsClient = {
 }
 
 
-def requestLatest(querry: String) = {
-  wsClient
-    .url("http://search.maven.org/solrsearch/select")
-    .withQueryStringParameters(
-      "q" -> querry
-    )
-    .get
+def requestLatest(querry: String): List[Latest.Doc] = {
+  val request = 
+    wsClient
+      .url("http://search.maven.org/solrsearch/select")
+      .withQueryStringParameters(
+        "q" -> querry
+      )
+      .get
+
+  parse(Await.result(request, 10.seconds).body).extract[Latest.Body].response.docs
 }
 
-val responseLatest = Await.result(requestLatest("sbt-microsites"), 10.seconds)
+requestLatest("sbt-microsites")
 
-val latestMicrosites = parse(responseLatest.body).extract[Latest.Body]
+def requestGav(groupId: String, artifactId: String): List[Gav.Doc] = {
+  val request = 
+    wsClient
+      .url("http://search.maven.org/solrsearch/select")
+      .withQueryStringParameters(
+        "q" -> s"""g:"$groupId" AND a:"$artifactId"""",
+        "core" -> "gav"
+      )
+      .get
 
-def requestGav(groupId: String, artifactId: String) = {
-  wsClient
-    .url("http://search.maven.org/solrsearch/select")
-    .withQueryStringParameters(
-      "q" -> s"""g:"$groupId" AND a:"$artifactId"""",
-      "core" -> "gav"
-    )
-    .get
+  parse(Await.result(request, 10.seconds).body).extract[Gav.Body].response.docs
 }
 
-val responseGav = Await.result(requestGav("com.47deg", "sbt-microsites"), 10.seconds)
-
-
-val allMicrosites = parse(responseGav.body).extract[Gav.Body]
-
+requestGav("com.47deg", "sbt-microsites")
 
 // http://repo1.maven.org/maven2/com/47deg/sbt-microsites_2.12_1.0/0.7.1/sbt-microsites-0.7.1.pom
-def download(groupId: String, artifact: String, version: String, target: ScalaTarget) = {
+def download(groupId: String, artifact: String, version: String, target: ScalaTarget): String = {
   val path = groupId.replaceAllLiterally(".", "/")
-  wsClient.url(
-    s"http://repo1.maven.org/maven2/$path/$artifact${target.encode}/$version/$artifact-$version.pom"
-  )
+  val request = 
+    wsClient.url(
+      s"http://repo1.maven.org/maven2/$path/$artifact${target.encode}/$version/$artifact-$version.pom"
+    ).get
+
+  Await.result(request, 10.seconds).body
 }
 
 val sbtTarget = ScalaTarget.sbt(SemanticVersion("2.12").get, SemanticVersion("1.0").get)
+download("com.47deg", "sbt-microsites", "0.7.1", sbtTarget)
 
-val downloadResponse = Await.result(download("com.47deg", "sbt-microsites", "0.7.1", sbtTarget).get, 10.seconds)
+
+// val lines = Files.readAllLines(Paths.get("../trash/_scaladex-missing")).toArray.toSet.map((x: Any) => x.toString)
+// val maven = lines.map(line => (line, requestLatest(line)))
+
+// 51 on maven
+// 112 not
+
+import scala.collection.JavaConverters._
+val lines = Files.readAllLines(Paths.get("../trash/_scaladex-missing")).asScala.map(_.split('/').tail.head)
+
