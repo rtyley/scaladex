@@ -1,8 +1,22 @@
-// http://search.maven.org/solrsearch/select
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import com.typesafe.config.ConfigFactory
+import play.api._
+
+import play.api.libs.ws._
+import play.api.libs.ws.ahc._
+import play.api.libs.json._
+
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
+import scala.util.{Try, Success, Failure}
 
 import org.joda.time.DateTime
 import org.json4s._
 import org.json4s.native.JsonMethods._
+
+import ch.epfl.scala.index.model.release.ScalaTarget
+import ch.epfl.scala.index.model.SemanticVersion
 
 object TimeStampDateTimeSerializer extends CustomSerializer[DateTime](format =>
   (
@@ -42,23 +56,11 @@ object Gav {
   )
 }
 
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
-
 implicit val system = ActorSystem()
 import system.dispatcher
 implicit val materializer = ActorMaterializer()
 
-import com.typesafe.config.ConfigFactory
-import play.api._
 
-import play.api.libs.ws._
-import play.api.libs.ws.ahc._
-import play.api.libs.json._
-
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
-import scala.util.{Try, Success, Failure}
 
 val wsClient = {
   val configuration = Configuration.reference ++ Configuration(
@@ -110,14 +112,6 @@ val allMicrosites = parse(responseGav.body).extract[Gav.Body]
 
 
 // http://repo1.maven.org/maven2/com/47deg/sbt-microsites_2.12_1.0/0.7.1/sbt-microsites-0.7.1.pom
-//                               com.47deg
-//                                         sbt-microsites
-//                                                                 0.7.1
-
-
-import ch.epfl.scala.index.model.release.ScalaTarget
-import ch.epfl.scala.index.model.SemanticVersion
-
 def download(groupId: String, artifact: String, version: String, target: ScalaTarget) = {
   val path = groupId.replaceAllLiterally(".", "/")
   wsClient.url(
@@ -127,4 +121,4 @@ def download(groupId: String, artifact: String, version: String, target: ScalaTa
 
 val sbtTarget = ScalaTarget.sbt(SemanticVersion("2.12").get, SemanticVersion("1.0").get)
 
-val downloadResponse = Await.result(download("com.47deg", "sbt-microsites", "0.7.1", sbtTarget), 10.seconds)
+val downloadResponse = Await.result(download("com.47deg", "sbt-microsites", "0.7.1", sbtTarget).get, 10.seconds)
