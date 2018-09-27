@@ -1,0 +1,18 @@
+
+query {
+  viewer {
+      repositories(first: 100, affiliations: [OWNER,COLLABORATOR, ORGANIZATION_MEMBER]) {
+        pageInfo {
+          endCursor
+          startCursor
+          
+        }
+
+        totalCount
+        nodes {
+          nameWithOwner
+          
+        }
+      }
+    }    
+}

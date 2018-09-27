@@ -1,0 +1,109 @@
+query {
+  viewer {
+     repositories(first: 100, affiliations: [COLLABORATOR, ORGANIZATION_MEMBER]) {       
+       pageInfo {
+         endCursor
+         startCursor
+       }
+       totalCount
+       nodes {
+         nameWithOwner
+         viewerPermission
+       }
+     }
+   }
+}
+
+{
+  "data": {
+    "viewer": {
+      "repositories": {
+        "pageInfo": {
+          "endCursor": "Y3Vyc29yOnYyOpHOB0e6xw==",
+          "startCursor": "Y3Vyc29yOnYyOpHOAAREAQ=="
+        },
+        "totalCount": 34,
+        "nodes": [
+          {
+            "nameWithOwner": "sbt/sbt",
+            "viewerPermission": "READ"
+          },
+          {
+            "nameWithOwner": "scala-montreal/scala-montreal.github.com",
+            "viewerPermission": "ADMIN"
+          },
+          {
+            "nameWithOwner": "scala-montreal/code-samples",
+            "viewerPermission": "ADMIN"
+          },
+          {
+            "nameWithOwner": "OlegYch/scastie_old",
+            "viewerPermission": "WRITE"
+          }
+        ]
+      }
+    }
+  }
+}
+
+query {
+  viewer {
+     repositories(first: 100, affiliations: [OWNER]) {
+       pageInfo {
+         endCursor
+         startCursor
+       }
+       totalCount
+       nodes {
+         nameWithOwner
+       }
+     }
+   }
+}
+
+
+{
+  "data": {
+    "viewer": {
+      "repositories": {
+        "pageInfo": {
+          "endCursor": "Y3Vyc29yOnYyOpHOBy8xNw==",
+          "startCursor": "Y3Vyc29yOnYyOpHOAE20mg=="
+        },
+        "totalCount": 135,
+        "nodes": [
+          {
+            "nameWithOwner": "MasseGuillaume/ScalaKata"
+          }
+        ]
+      }
+    }
+  }
+}
+
+
+query {
+  viewer {
+     organizations(first: 100) {
+      nodes {
+        login
+        viewerCanAdminister
+      }
+    }
+   }
+}
+
+{
+  "data": {
+    "viewer": {
+      "organizations": {
+        "nodes": [
+          {
+            "login": "sbt",
+            "viewerCanAdminister": false
+          }
+        ]
+      }
+    }
+  }
+}
