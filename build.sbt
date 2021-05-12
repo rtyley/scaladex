@@ -9,7 +9,6 @@ val akkaHttpVersion = "10.1.12"
 val elastic4sVersion = "7.10.2"
 val log4jVersion = "2.13.3"
 val nscalaTimeVersion = "2.24.0"
-val testcontainersVersion = "1.15.1"
 
 lazy val logging =
   libraryDependencies ++= Seq(
@@ -67,6 +66,8 @@ lazy val commonSettings = Seq(
 ) ++ baseSettings ++
   addCommandAlias("start", "reStart") ++ logging ++ ammoniteSettings
 
+enablePlugins(Elasticsearch)
+
 lazy val scaladex = project
   .in(file("."))
   .aggregate(
@@ -99,8 +100,6 @@ lazy val search = project
   .settings(
     libraryDependencies ++= Seq(
       "com.sksamuel.elastic4s" %% "elastic4s-client-esjava" % elastic4sVersion,
-      "org.testcontainers" % "testcontainers" % testcontainersVersion,
-      "org.testcontainers" % "elasticsearch" % testcontainersVersion,
       "org.json4s" %% "json4s-native" % "3.6.9",
       "org.typelevel" %% "jawn-json4s" % "1.0.0"
     )
@@ -149,9 +148,11 @@ lazy val server = project
     packageBin in Universal := (packageBin in Universal)
       .dependsOn(WebKeys.assets in Assets)
       .value,
-    reStart := reStart.dependsOn(WebKeys.assets in Assets).evaluated,
-    unmanagedResourceDirectories in Compile += (WebKeys.public in Assets).value,
-    javaOptions in reStart ++= Seq("-Xmx4g")
+    Test / test := (Test / test).dependsOn(startElasticsearch).value,
+    reStart := reStart.dependsOn(startElasticsearch).evaluated,
+    Compile / run := (Compile / run).dependsOn(startElasticsearch).evaluated,
+    Compile / unmanagedResourceDirectories += (Assets / WebKeys.public).value,
+    reStart / javaOptions ++= Seq("-Xmx4g")
   )
   .dependsOn(template, data, search, api.jvm)
   .enablePlugins(SbtSassify, JavaServerAppPackaging)
@@ -180,8 +181,10 @@ lazy val data = project
       "org.apache.logging.log4j" % "log4j-core" % log4jVersion % Runtime
     ),
     buildInfoPackage := "build.info",
-    buildInfoKeys := Seq[BuildInfoKey](baseDirectory in ThisBuild),
-    javaOptions in reStart ++= Seq("-Xmx4g")
+    buildInfoKeys := Seq[BuildInfoKey](ThisBuild / baseDirectory),
+    reStart := reStart.dependsOn(startElasticsearch).evaluated,
+    Compile / run := (Compile / run).dependsOn(startElasticsearch).evaluated,
+    reStart / javaOptions ++= Seq("-Xmx4g")
   )
   .enablePlugins(BuildInfoPlugin, JavaAppPackaging)
   .dependsOn(model, search)
